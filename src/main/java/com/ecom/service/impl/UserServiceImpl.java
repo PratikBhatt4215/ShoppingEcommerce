@@ -126,9 +126,12 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public UserDtls updateUserProfile(UserDtls user, MultipartFile img) {
 
+		System.out.println("UserServiceImpl - user object: " + user);
+		System.out.println("UserServiceImpl - user.getId(): " + user.getId());
+
 		UserDtls dbUser = userRepository.findById(user.getId()).get();
 
-		if (!img.isEmpty()) {
+		if (img != null && !img.isEmpty()) {
 			dbUser.setProfileImage(img.getOriginalFilename());
 		}
 
@@ -144,13 +147,13 @@ public class UserServiceImpl implements UserService {
 		}
 
 		try {
-			if (!img.isEmpty()) {
+			if (img != null && !img.isEmpty()) {
 				File saveFile = new ClassPathResource("static/img").getFile();
 
 				Path path = Paths.get(saveFile.getAbsolutePath() + File.separator + "profile_img" + File.separator
 						+ img.getOriginalFilename());
 
-//			System.out.println(path);
+				// System.out.println(path);
 				Files.copy(img.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
 			}
 		} catch (Exception e) {

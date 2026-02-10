@@ -33,19 +33,34 @@ public class CartServiceImpl implements CartService {
 		UserDtls userDtls = userRepository.findById(userId).get();
 		Product product = productRepository.findById(productId).get();
 
+		// Check if product is active and has stock
+		if (!product.getIsActive()) {
+			throw new RuntimeException("Product is not available");
+		}
+
 		Cart cartStatus = cartRepository.findByProductIdAndUserId(productId, userId);
 
 		Cart cart = null;
+		int requestedQuantity = 1;
 
 		if (ObjectUtils.isEmpty(cartStatus)) {
+			// New cart item - check if stock available
+			if (product.getStock() < 1) {
+				throw new RuntimeException("Product is out of stock");
+			}
 			cart = new Cart();
 			cart.setProduct(product);
 			cart.setUser(userDtls);
 			cart.setQuantity(1);
 			cart.setTotalPrice(1 * product.getDiscountPrice());
 		} else {
+			// Existing cart item - check if we can add one more
+			requestedQuantity = cartStatus.getQuantity() + 1;
+			if (product.getStock() < requestedQuantity) {
+				throw new RuntimeException("Only " + product.getStock() + " items available in stock");
+			}
 			cart = cartStatus;
-			cart.setQuantity(cart.getQuantity() + 1);
+			cart.setQuantity(requestedQuantity);
 			cart.setTotalPrice(cart.getQuantity() * cart.getProduct().getDiscountPrice());
 		}
 		Cart saveCart = cartRepository.save(cart);
@@ -93,8 +108,16 @@ public class CartServiceImpl implements CartService {
 			}
 
 		} else {
+			// Increasing quantity - check stock availability
+			Product product = cart.getProduct();
 			updateQuantity = cart.getQuantity() + 1;
+
+			if (product.getStock() < updateQuantity) {
+				throw new RuntimeException("Only " + product.getStock() + " items available in stock");
+			}
+
 			cart.setQuantity(updateQuantity);
+			cart.setTotalPrice(updateQuantity * product.getDiscountPrice());
 			cartRepository.save(cart);
 		}
 

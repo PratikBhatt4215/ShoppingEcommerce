@@ -15,10 +15,12 @@ import org.springframework.stereotype.Service;
 import com.ecom.model.Cart;
 import com.ecom.model.OrderAddress;
 import com.ecom.model.OrderRequest;
+import com.ecom.model.Product;
 import com.ecom.model.ProductOrder;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.CartRepository;
 import com.ecom.repository.ProductOrderRepository;
+import com.ecom.repository.ProductRepository;
 import com.ecom.service.OrderService;
 import com.ecom.util.CommonUtil;
 import com.ecom.util.OrderStatus;
@@ -33,6 +35,9 @@ public class OrderServiceImpl implements OrderService {
 	private CartRepository cartRepository;
 
 	@Autowired
+	private ProductRepository productRepository;
+
+	@Autowired
 	private CommonUtil commonUtil;
 
 	@Override
@@ -40,6 +45,23 @@ public class OrderServiceImpl implements OrderService {
 
 		List<Cart> carts = cartRepository.findByUserId(userid);
 
+		// First, validate stock for all items before creating any orders
+		for (Cart cart : carts) {
+			Product product = cart.getProduct();
+
+			// Check if product is active
+			if (!product.getIsActive()) {
+				throw new RuntimeException("Product '" + product.getTitle() + "' is no longer available");
+			}
+
+			// Check if sufficient stock available
+			if (product.getStock() < cart.getQuantity()) {
+				throw new RuntimeException("Insufficient stock for '" + product.getTitle() +
+						"'. Only " + product.getStock() + " items available");
+			}
+		}
+
+		// If all validations pass, create orders and reduce stock
 		for (Cart cart : carts) {
 
 			ProductOrder order = new ProductOrder();
@@ -69,13 +91,23 @@ public class OrderServiceImpl implements OrderService {
 			order.setOrderAddress(address);
 
 			ProductOrder saveOrder = orderRepository.save(order);
-			resetCart(cart.getUser());
+
+			// Reduce stock after successful order
+			Product product = cart.getProduct();
+			product.setStock(product.getStock() - cart.getQuantity());
+			productRepository.save(product);
+
 			commonUtil.sendMailForProductOrder(saveOrder, "success");
 		}
+
+		// Clear cart after all orders are placed
+		resetCart(carts.get(0).getUser());
 	}
+
 	private void resetCart(UserDtls user) {
 		cartRepository.deleteByUser(user);
 	}
+
 	@Override
 	public List<ProductOrder> getOrdersByUser(Integer userId) {
 		List<ProductOrder> orders = orderRepository.findByUserId(userId);

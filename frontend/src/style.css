@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+/* Minimal custom styles */
+body {
+  margin: 0;
+}
+
+#app {
+  width: 100%;
+}

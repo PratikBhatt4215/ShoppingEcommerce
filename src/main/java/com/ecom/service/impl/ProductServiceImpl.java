@@ -64,7 +64,7 @@ public class ProductServiceImpl implements ProductService {
 
 		Product dbProduct = getProductById(product.getId());
 
-		String imageName = image.isEmpty() ? dbProduct.getImage() : image.getOriginalFilename();
+		String imageName = (image == null || image.isEmpty()) ? dbProduct.getImage() : image.getOriginalFilename();
 
 		dbProduct.setTitle(product.getTitle());
 		dbProduct.setDescription(product.getDescription());
@@ -84,7 +84,7 @@ public class ProductServiceImpl implements ProductService {
 
 		if (!ObjectUtils.isEmpty(updateProduct)) {
 
-			if (!image.isEmpty()) {
+			if (image != null && !image.isEmpty()) {
 
 				try {
 					File saveFile = new ClassPathResource("static/img").getFile();
@@ -131,10 +131,10 @@ public class ProductServiceImpl implements ProductService {
 		Pageable pageable = PageRequest.of(pageNo, pageSize);
 		Page<Product> pageProduct = null;
 
-		if (ObjectUtils.isEmpty(category)) {
+		if (ObjectUtils.isEmpty(category) || category.trim().isEmpty()) {
 			pageProduct = productRepository.findByIsActiveTrue(pageable);
 		} else {
-			pageProduct = productRepository.findByCategory(pageable, category);
+			pageProduct = productRepository.findByCategoryAndIsActiveTrue(pageable, category);
 		}
 		return pageProduct;
 	}
@@ -148,11 +148,11 @@ public class ProductServiceImpl implements ProductService {
 		pageProduct = productRepository.findByisActiveTrueAndTitleContainingIgnoreCaseOrCategoryContainingIgnoreCase(ch,
 				ch, pageable);
 
-//		if (ObjectUtils.isEmpty(category)) {
-//			pageProduct = productRepository.findByIsActiveTrue(pageable);
-//		} else {
-//			pageProduct = productRepository.findByCategory(pageable, category);
-//		}
+		// if (ObjectUtils.isEmpty(category)) {
+		// pageProduct = productRepository.findByIsActiveTrue(pageable);
+		// } else {
+		// pageProduct = productRepository.findByCategory(pageable, category);
+		// }
 		return pageProduct;
 	}
 
